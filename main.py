@@ -78,9 +78,10 @@ def get_token(price, productNo, api_id,api_pw):
 
 
     json_new_result = json.loads(result)
-
-    # json_new_result['originProduct']['salePrice']=price
-    pprint.pprint(json_new_result)
+    print("상품번호:",productNo,"변경전가격:",json_new_result['originProduct']['salePrice'],"변경후가격:",price)
+    json_new_result['originProduct']['salePrice']=price
+    json_new_result['originProduct']['detailContent']=""
+    # pprint.pprint(json_new_result)
     file_path = 'result.json'
     with open(file_path, 'w') as f:
         json.dump(json_new_result, f)
@@ -156,9 +157,7 @@ def load_excel(file_path):
         if productNo=="" or productNo==None:
             break
         price = ws.cell(row=i, column=2).value
-
         info = [productNo, price]
-
         info_list.append(info)
 
     print("상품정보:",info_list)
@@ -258,6 +257,7 @@ def load_store(file_path):
 class Thread(QThread):
     cnt = 0
     user_signal = pyqtSignal(str)  # 사용자 정의 시그널 2 생성
+    user_signal2 = pyqtSignal()  # 사용자 정의 시그널 2 생성
 
     def __init__(self, parent,fname):  # parent는 WndowClass에서 전달하는 self이다.(WidnowClass의 인스턴스)
         super().__init__(parent)
@@ -272,12 +272,13 @@ class Thread(QThread):
         info_list=load_excel(self.fname) # 엑셀의 정보를 가져옴
         for index,info_elem in enumerate(info_list):
             text="{}번째 상품 변경중...".format(index+1)
-            self.user_signal.emit(self.cnt)
+            self.user_signal.emit(text)
             productNo=info_elem[0] #상품번호
             price=info_elem[1] #가격
             get_token(price,productNo,api_id,api_pw)
-            # change_price(productNo)
+            change_price(productNo)
             time.sleep(0.6)
+        self.user_signal2.emit()
 
     def stop(self):
         pass
@@ -296,11 +297,13 @@ class Example(QMainWindow, Ui_MainWindow):
         print('11')
         self.x = Thread(self,self.fname)
         self.x.user_signal.connect(self.slot1)  # 사용자 정의 시그널2 슬롯 Connect
+        self.x.user_signal2.connect(self.slot2)  # 사용자 정의 시그널2 슬롯 Connect
         self.x.start()
 
     def slot1(self, data1):  # 사용자 정의 시그널1에 connect된 function
         self.textEdit.append(str(data1))
-
+    def slot2(self, data1):  # 사용자 정의 시그널1에 connect된 function
+        self.textEdit.append(str(data1))
     def find(self):
         print("find")
         self.fname= QFileDialog.getOpenFileName(self," Open file",' ./')[0]
